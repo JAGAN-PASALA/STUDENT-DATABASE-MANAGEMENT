@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Database Management Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    .custom-scroll {
+      scroll-behavior: smooth;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen relative font-sans">
+
+  <!-- Top Header Navigation -->
+  <header class="bg-indigo-700 text-white shadow sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <button onclick="showView('list')" class="w-9 h-9 rounded-lg bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center text-white transition shadow-sm" title="Home">
+          <i class="fa-solid fa-graduation-cap text-lg"></i>
+        </button>
+        <div>
+          <h1 class="text-base font-bold tracking-tight">Student Management System</h1>
+          <p class="text-[11px] text-indigo-200">SQLite Database with Gemini AI Assistant</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <button onclick="showView('create')" class="text-xs bg-white text-indigo-700 hover:bg-indigo-50 px-3 py-2 rounded-lg font-semibold flex items-center gap-1.5 shadow-sm transition">
+          <i class="fa-solid fa-user-plus"></i>
+          <span>Add Student</span>
+        </button>
+        <a href="/docs" target="_blank" class="text-xs bg-indigo-800 hover:bg-indigo-900 text-white px-3 py-2 rounded-lg border border-indigo-400/40 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-book-bookmark"></i>
+          <span>Swagger Docs</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- VIEW 1: DIRECTORY / LIST ALL -->
+    <section id="view-list" class="space-y-4">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-slate-200 gap-3 shadow-xs">
+        <div>
+          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-users text-indigo-600"></i> Enrolled Students Directory
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5" id="recordsCounter">Loading database records...</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="showView('create')" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-lg font-medium transition flex items-center gap-1.5">
+            <i class="fa-solid fa-plus"></i>
+            <span>Register New</span>
+          </button>
+          <button onclick="loadStudents()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-medium border border-slate-200 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-rotate-right" id="refreshSpinner"></i>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Student Records Table -->
+      <div class="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-700 uppercase font-semibold text-[11px] border-b border-slate-200 tracking-wider">
+              <tr>
+                <th class="py-3 px-4">ID</th>
+                <th class="py-3 px-4">Student Name</th>
+                <th class="py-3 px-4">Email</th>
+                <th class="py-3 px-4">Major</th>
+                <th class="py-3 px-4">GPA</th>
+                <th class="py-3 px-4">Year</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="studentTableBody" class="divide-y divide-slate-100 font-normal">
+              <tr>
+                <td colspan="7" class="py-12 text-center text-slate-400">
+                  <i class="fa-solid fa-spinner fa-spin text-xl text-indigo-600 mb-2"></i>
+                  <p>Fetching records from SQLite...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: REGISTER NEW STUDENT -->
+    <section id="view-create" class="hidden max-w-2xl mx-auto space-y-4">
+      <div class="flex items-center gap-3">
+        <button onclick="showView('list')" class="px-3 py-1.5 bg-white hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center gap-1.5 shadow-xs transition">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>Back to Directory</span>
+        </button>
+        <span class="text-xs text-slate-400">/ Register Student</span>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl shadow-xs border border-slate-200">
+        <h2 class="text-base font-bold text-slate-800 pb-3 border-b border-slate-100 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-user-plus text-indigo-600"></i> New Student Profile
+        </h2>
+
+        <form onsubmit="handleCreateStudent(event)" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">First Name *</label>
+              <input type="text" id="addFirstName" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Aarav" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Last Name *</label>
+              <input type="text" id="addLastName" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Sharma" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Email Address *</label>
+            <input type="email" id="addEmail" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="aarav.sharma@example.edu" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Major / Course *</label>
+            <input type="text" id="addMajor" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Computer Science" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">GPA (0.00 - 4.00) *</label>
+              <input type="number" step="0.01" min="0" max="4" id="addGpa" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="3.85" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Enrollment Year *</label>
+              <input type="number" min="1990" max="2035" id="addYear" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="2024" />
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+            <button type="button" onclick="showView('list')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-arrow-left"></i>
+              <span>Cancel & Go Back</span>
+            </button>
+            <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span>Save Student</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- VIEW 3: EDIT / UPDATE STUDENT -->
+    <section id="view-edit" class="hidden max-w-2xl mx-auto space-y-4">
+      <div class="flex items-center gap-3">
+        <button onclick="showView('list')" class="px-3 py-1.5 bg-white hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center gap-1.5 shadow-xs transition">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>Back to Directory</span>
+        </button>
+        <span class="text-xs text-slate-400">/ Update Student Record</span>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl shadow-xs border border-slate-200">
+        <h2 class="text-base font-bold text-slate-800 pb-3 border-b border-slate-100 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-blue-600"></i> Update Student <span id="editIdBadge" class="text-indigo-600">#0</span>
+        </h2>
+
+        <form onsubmit="handleUpdateStudent(event)" class="space-y-4">
+          <input type="hidden" id="editStudentId" />
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">First Name *</label>
+              <input type="text" id="editFirstName" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Last Name *</label>
+              <input type="text" id="editLastName" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Email Address *</label>
+            <input type="email" id="editEmail" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Major / Course *</label>
+            <input type="text" id="editMajor" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">GPA *</label>
+              <input type="number" step="0.01" min="0" max="4" id="editGpa" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Enrollment Year *</label>
+              <input type="number" min="1990" max="2035" id="editYear" required class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+            <button type="button" onclick="showView('list')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-arrow-left"></i>
+              <span>Back (Discard)</span>
+            </button>
+            <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
+              <i class="fa-solid fa-check"></i>
+              <span>Save Changes</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- VIEW 4: PROFILE CARD -->
+    <section id="view-profile" class="hidden max-w-xl mx-auto space-y-4">
+      <div class="flex items-center gap-3">
+        <button onclick="showView('list')" class="px-3 py-1.5 bg-white hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center gap-1.5 shadow-xs transition">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>Back to Directory</span>
+        </button>
+        <span class="text-xs text-slate-400">/ Student Profile</span>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl shadow-xs border border-slate-200 space-y-4">
+        <div id="profileDetailsContainer"></div>
+
+        <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+          <button onclick="showView('list')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back to Directory</span>
+          </button>
+          <button id="profileEditBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Edit This Profile</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- FLOATING AI ASSISTANT -->
+  <div class="fixed bottom-6 right-6 z-40 flex flex-col items-end">
+    <!-- Chat Modal Window -->
+    <div id="aiChatWindow" class="hidden mb-3 w-[360px] sm:w-[420px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[520px]">
+      
+      <!-- Chat Header -->
+      <div class="bg-indigo-700 text-white px-4 py-3 flex justify-between items-center shadow-xs">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <div>
+            <div class="font-bold text-xs">AI Assistant</div>
+            <div class="text-[10px] text-indigo-200 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Gemini Active
+            </div>
+          </div>
+        </div>
+        <button onclick="toggleAiChat()" class="text-white hover:text-slate-200 px-2 py-1 text-sm font-bold" title="Minimize / Back">&times;</button>
+      </div>
+
+      <!-- Messages Area with Safe Auto-Scroll -->
+      <div id="chatMessages" class="custom-scroll flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50 text-xs">
+        <div class="bg-white p-3 rounded-xl border border-slate-200 text-slate-700 shadow-xs max-w-[88%] leading-relaxed">
+          👋 Ask anything about the students in the database:
+          <ul class="list-disc ml-4 mt-2 space-y-1 text-slate-600">
+            <li>"Who has the highest GPA?"</li>
+            <li>"List all Computer Science students"</li>
+            <li>"What is the average GPA?"</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Chat Input -->
+      <form onsubmit="handleSendAiMessage(event)" class="p-3 bg-white border-t border-slate-200 flex gap-2">
+        <input type="text" id="aiQueryInput" placeholder="Ask AI about student database..." required class="flex-1 border rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-xs font-semibold">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- Floating Bubble Button -->
+    <button onclick="toggleAiChat()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2 border-2 border-white transition transform hover:scale-105 active:scale-95">
+      <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+      <span class="font-bold text-xs">Ask AI Help</span>
+    </button>
+  </div>
+
+  <script>
+    let cachedStudents = [];
+    const chatContainer = document.getElementById("chatMessages");
+    let isUserScrolledUp = false;
+
+    // Detect manual scrolling away from bottom to prevent auto-scroll interruption
+    chatContainer.addEventListener("scroll", () => {
+      const threshold = 40;
+      const distanceFromBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
+      isUserScrolledUp = distanceFromBottom > threshold;
+    });
+
+    // Safe scrolling helper
+    function safeScrollToBottom(force = false) {
+      if (force || !isUserScrolledUp) {
+        chatContainer.scrollTo({
+          top: chatContainer.scrollHeight,
+          behavior: "smooth"
+        });
+      }
+    }
+
+    // VIEW ROUTING
+    function showView(viewName) {
+      document.getElementById("view-list").classList.add("hidden");
+      document.getElementById("view-create").classList.add("hidden");
+      document.getElementById("view-edit").classList.add("hidden");
+      document.getElementById("view-profile").classList.add("hidden");
+
+      if (viewName === "list") {
+        document.getElementById("view-list").classList.remove("hidden");
+        loadStudents();
+      } else if (viewName === "create") {
+        document.getElementById("view-create").classList.remove("hidden");
+        document.getElementById("addFirstName").focus();
+      } else if (viewName === "edit") {
+        document.getElementById("view-edit").classList.remove("hidden");
+      } else if (viewName === "profile") {
+        document.getElementById("view-profile").classList.remove("hidden");
+      }
+    }
+
+    // READ / LIST ALL
+    async function loadStudents() {
+      const tbody = document.getElementById("studentTableBody");
+      const spinner = document.getElementById("refreshSpinner");
+      if (spinner) spinner.classList.add("fa-spin");
+
+      try {
+        const res = await fetch("/students/");
+        if (!res.ok) throw new Error("Server returned status " + res.status);
+        const data = await res.json();
+        cachedStudents = Array.isArray(data) ? data : [];
+
+        document.getElementById("recordsCounter").innerText = `Total Students Enrolled: ${cachedStudents.length}`;
+
+        if (cachedStudents.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" class="py-12 text-center text-slate-400">
+                <i class="fa-solid fa-folder-open text-2xl mb-2 text-slate-300"></i>
+                <p class="font-semibold text-slate-600">No students recorded yet.</p>
+                <p class="text-xs text-slate-400 mt-1">Click "Add Student" to create your first record.</p>
+              </td>
+            </tr>`;
+          return;
+        }
+
+        tbody.innerHTML = cachedStudents.map(s => `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="py-3 px-4 font-bold text-slate-700">#${s.id}</td>
+            <td class="py-3 px-4 font-medium text-slate-900">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</td>
+            <td class="py-3 px-4 text-slate-500">${escapeHtml(s.email)}</td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md font-semibold text-[11px] border border-indigo-100">
+                ${escapeHtml(s.major)}
+              </span>
+            </td>
+            <td class="py-3 px-4 font-bold ${Number(s.gpa) >= 3.5 ? 'text-emerald-600' : 'text-slate-700'}">
+              ${Number(s.gpa).toFixed(2)}
+            </td>
+            <td class="py-3 px-4 text-slate-600">${s.enrollment_year}</td>
+            <td class="py-3 px-4 text-right space-x-1 whitespace-nowrap">
+              <button onclick="viewStudentProfile(${s.id})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold transition">
+                <i class="fa-solid fa-eye"></i> View
+              </button>
+              <button onclick="prepareEditStudent(${s.id})" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md text-[11px] font-semibold transition">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </button>
+              <button onclick="handleDeleteStudent(${s.id})" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-md text-[11px] font-semibold transition">
+                <i class="fa-solid fa-trash"></i> Delete
+              </button>
+            </td>
+          </tr>
+        `).join("");
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-rose-500 font-medium">Failed to load students: ${err.message}</td></tr>`;
+      } finally {
+        if (spinner) spinner.classList.remove("fa-spin");
+      }
+    }
+
+    // CREATE STUDENT
+    async function handleCreateStudent(e) {
+      e.preventDefault();
+      const payload = {
+        first_name: document.getElementById("addFirstName").value.trim(),
+        last_name: document.getElementById("addLastName").value.trim(),
+        email: document.getElementById("addEmail").value.trim(),
+        major: document.getElementById("addMajor").value.trim(),
+        gpa: parseFloat(document.getElementById("addGpa").value),
+        enrollment_year: parseInt(document.getElementById("addYear").value)
+      };
+
+      try {
+        const res = await fetch("/students/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          alert("Error adding student: " + (error.detail || "Validation error"));
+          return;
+        }
+
+        e.target.reset();
+        showView("list");
+      } catch (err) {
+        alert("Submission failed: " + err.message);
+      }
+    }
+
+    // PREPARE & SUBMIT UPDATE
+    function prepareEditStudent(id) {
+      const student = cachedStudents.find(s => s.id === id);
+      if (!student) return;
+
+      document.getElementById("editStudentId").value = student.id;
+      document.getElementById("editIdBadge").innerText = `#${student.id}`;
+      document.getElementById("editFirstName").value = student.first_name;
+      document.getElementById("editLastName").value = student.last_name;
+      document.getElementById("editEmail").value = student.email;
+      document.getElementById("editMajor").value = student.major;
+      document.getElementById("editGpa").value = student.gpa;
+      document.getElementById("editYear").value = student.enrollment_year;
+
+      showView("edit");
+    }
+
+    async function handleUpdateStudent(e) {
+      e.preventDefault();
+      const id = document.getElementById("editStudentId").value;
+      const payload = {
+        first_name: document.getElementById("editFirstName").value.trim(),
+        last_name: document.getElementById("editLastName").value.trim(),
+        email: document.getElementById("editEmail").value.trim(),
+        major: document.getElementById("editMajor").value.trim(),
+        gpa: parseFloat(document.getElementById("editGpa").value),
+        enrollment_year: parseInt(document.getElementById("editYear").value)
+      };
+
+      try {
+        const res = await fetch(`/students/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert("Update error: " + (err.detail || "Unable to update"));
+          return;
+        }
+
+        showView("list");
+      } catch (err) {
+        alert("Network error: " + err.message);
+      }
+    }
+
+    // READ SINGLE / VIEW PROFILE
+    function viewStudentProfile(id) {
+      const s = cachedStudents.find(item => item.id === id);
+      if (!s) return;
+
+      document.getElementById("profileDetailsContainer").innerHTML = `
+        <div class="flex items-center gap-3 pb-4 border-b border-slate-100">
+          <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-lg">
+            ${s.first_name[0]}${s.last_name[0]}
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</h3>
+            <p class="text-xs text-slate-400">Student ID #${s.id}</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 pt-2 text-xs">
+          <div class="p-3 bg-slate-50 rounded-xl">
+            <span class="text-slate-400 block text-[10px] uppercase font-semibold">Email</span>
+            <span class="font-semibold text-slate-800 break-all">${escapeHtml(s.email)}</span>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl">
+            <span class="text-slate-400 block text-[10px] uppercase font-semibold">Major</span>
+            <span class="font-semibold text-slate-800">${escapeHtml(s.major)}</span>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl">
+            <span class="text-slate-400 block text-[10px] uppercase font-semibold">Cumulative GPA</span>
+            <span class="font-bold text-indigo-600 text-sm">${Number(s.gpa).toFixed(2)}</span>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl">
+            <span class="text-slate-400 block text-[10px] uppercase font-semibold">Enrollment Year</span>
+            <span class="font-semibold text-slate-800">${s.enrollment_year}</span>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("profileEditBtn").onclick = () => prepareEditStudent(s.id);
+      showView("profile");
+    }
+
+    // DELETE STUDENT
+    async function handleDeleteStudent(id) {
+      const student = cachedStudents.find(s => s.id === id);
+      if (!student) return;
+
+      if (!confirm(`Are you sure you want to permanently delete #${id} (${student.first_name} ${student.last_name})?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/students/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          loadStudents();
+        } else {
+          alert("Failed to delete record.");
+        }
+      } catch (err) {
+        alert("Delete failed: " + err.message);
+      }
+    }
+
+    // AI ASSISTANT CHAT WITH SAFE AUTO-SCROLL
+    function toggleAiChat() {
+      const win = document.getElementById("aiChatWindow");
+      win.classList.toggle("hidden");
+      if (!win.classList.contains("hidden")) {
+        document.getElementById("aiQueryInput").focus();
+        safeScrollToBottom(true);
+      }
+    }
+
+    async function handleSendAiMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById("aiQueryInput");
+      const query = input.value.trim();
+      if (!query) return;
+
+      // Render user message and auto-scroll down
+      chatContainer.innerHTML += `
+        <div class="ml-auto bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] leading-relaxed">
+          ${escapeHtml(query)}
+        </div>
+      `;
+      input.value = "";
+      safeScrollToBottom(true);
+
+      // Loading spinner
+      const spinId = "spin-" + Date.now();
+      chatContainer.innerHTML += `
+        <div id="${spinId}" class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 text-slate-500 max-w-[85%] flex items-center gap-2">
+          <i class="fa-solid fa-circle-notch fa-spin text-indigo-600"></i>
+          <span>Querying SQLite...</span>
+        </div>`;
+      safeScrollToBottom(true);
+
+      try {
+        const res = await fetch("/chat/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query })
+        });
+        const data = await res.json();
+        document.getElementById(spinId)?.remove();
+
+        if (res.ok) {
+          // Robust text extraction: strictly pick the string output
+          let botReply = "";
+          if (typeof data.response === "string" && data.response.trim().length > 0) {
+            botReply = data.response;
+          } else if (typeof data.answer === "string") {
+            botReply = data.answer;
+          } else if (typeof data === "string") {
+            botReply = data;
+          } else {
+            botReply = data.detail || "No details found.";
+          }
+
+          chatContainer.innerHTML += `
+            <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 text-slate-800 max-w-[88%] leading-relaxed shadow-xs">
+              ${escapeHtml(botReply)}
+            </div>
+          `;
+        } else {
+          chatContainer.innerHTML += `
+            <div class="bg-rose-50 text-rose-700 p-2.5 rounded-xl border border-rose-200">
+              ⚠️ ${escapeHtml(data.detail || "AI query failed.")}
+            </div>
+          `;
+        }
+      } catch (err) {
+        document.getElementById(spinId)?.remove();
+        chatContainer.innerHTML += `
+          <div class="bg-rose-50 text-rose-700 p-2.5 rounded-xl border border-rose-200">
+            Network error: ${escapeHtml(err.message)}
+          </div>
+        `;
+      }
+
+      // Safe scroll to new message
+      safeScrollToBottom(false);
+    }
+
+    // KEYBOARD NAVIGATION: ESC takes user back to the directory list
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        showView("list");
+        const aiWin = document.getElementById("aiChatWindow");
+        if (!aiWin.classList.contains("hidden")) aiWin.classList.add("hidden");
+      }
+    });
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Initialize list view on start
+    showView("list");
+  </script>
+</body>
+</html>

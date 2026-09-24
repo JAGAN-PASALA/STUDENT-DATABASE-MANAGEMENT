@@ -1,0 +1,15 @@
+# Virtual Environment
+venv/
+env/
+
+# Secrets & Local Configurations
+.env
+*.env
+
+# Local SQLite Database
+*.db
+students.db
+
+# Python Caches
+__pycache__/
+*.py[cod]
